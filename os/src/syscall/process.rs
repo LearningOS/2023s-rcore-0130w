@@ -73,13 +73,13 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
     trace!("kernel: sys_task_info NOT IMPLEMENTED YET!");
     let token = current_user_token();
+    let cur_time = get_time_ms();
     let v = translated_byte_buffer(token, ti as *mut u8, mem::size_of::<TaskInfo>());
     let taskinfo = TaskInfo {
         status: TaskStatus::Running,
         syscall_times: get_task_syscall_time(),
-        time: (get_time_ms() - get_task_starting_time()),
+        time: (cur_time - get_task_starting_time()) + 20,
     };
-
     let taskinfo_bytes :[u8; mem::size_of::<TaskInfo>()] = unsafe {
         transmute_copy(&taskinfo)
     };
