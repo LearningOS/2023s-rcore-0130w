@@ -5,16 +5,25 @@ use alloc::vec;
 use alloc::vec::Vec;
 use bitflags::*;
 
+
 bitflags! {
     /// page table entry flags
     pub struct PTEFlags: u8 {
+        /// const V
         const V = 1 << 0;
+        /// const R
         const R = 1 << 1;
+        /// const W
         const W = 1 << 2;
+        /// const X
         const X = 1 << 3;
+        /// const U
         const U = 1 << 4;
+        /// const G
         const G = 1 << 5;
+        /// const A
         const A = 1 << 6;
+        /// const D
         const D = 1 << 7;
     }
 }

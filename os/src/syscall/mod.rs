@@ -30,17 +30,43 @@ mod process;
 
 use fs::*;
 use process::*;
+
+use crate::task::add_task_syscall_time;
 /// handle syscall exception with `syscall_id` and other arguments
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
-        SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
-        SYSCALL_EXIT => sys_exit(args[0] as i32),
-        SYSCALL_YIELD => sys_yield(),
-        SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal, args[1]),
-        SYSCALL_TASK_INFO => sys_task_info(args[0] as *mut TaskInfo),
-        SYSCALL_MMAP => sys_mmap(args[0], args[1], args[2]),
-        SYSCALL_MUNMAP => sys_munmap(args[0], args[1]),
-        SYSCALL_SBRK => sys_sbrk(args[0] as i32),
+        SYSCALL_WRITE => {
+            add_task_syscall_time(syscall_id);
+            sys_write(args[0], args[1] as *const u8, args[2])
+        },
+        SYSCALL_EXIT => {
+            add_task_syscall_time(syscall_id);
+            sys_exit(args[0] as i32)
+        },
+        SYSCALL_YIELD => {
+            add_task_syscall_time(syscall_id);
+            sys_yield()
+        },
+        SYSCALL_GET_TIME => {
+            add_task_syscall_time(syscall_id);
+            sys_get_time(args[0] as *mut TimeVal, args[1])
+        },
+        SYSCALL_TASK_INFO => {
+            add_task_syscall_time(syscall_id);
+            sys_task_info(args[0] as *mut TaskInfo)
+        },
+        SYSCALL_MMAP => {
+            add_task_syscall_time(syscall_id);
+            sys_mmap(args[0], args[1], args[2])
+        },
+        SYSCALL_MUNMAP => {
+            add_task_syscall_time(syscall_id);
+            sys_munmap(args[0], args[1])
+        },
+        SYSCALL_SBRK => {
+            add_task_syscall_time(syscall_id);
+            sys_sbrk(args[0] as i32)
+        },
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     }
 }
