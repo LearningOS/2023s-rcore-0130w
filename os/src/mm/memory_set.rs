@@ -300,6 +300,15 @@ impl MemorySet {
             false
         }
     }
+
+    /// delete vpn
+    pub fn delete_vpn(&mut self, vpn : VirtPageNum) {
+        for map_area in self.areas.iter_mut() {
+            if map_area.check_vpn_exist(vpn) {
+                map_area.unmap_one(&mut self.page_table, vpn);
+            }
+        }
+    }
 }
 /// map area structure, controls a contiguous piece of virtual memory
 pub struct MapArea {
@@ -333,6 +342,14 @@ impl MapArea {
             map_perm: another.map_perm,
         }
     }
+
+    pub fn check_vpn_exist(&self, vpn: VirtPageNum) -> bool{
+        if self.vpn_range.get_start() <= vpn && self.vpn_range.get_end() >= vpn {
+            return true;
+        }
+        return false;
+    }
+
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;
         match self.map_type {

@@ -21,7 +21,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::loader::get_app_data_by_name;
+use crate::{loader::get_app_data_by_name, mm::{VirtAddr, MapPermission, VPNRange, VirtPageNum}};
 use alloc::sync::Arc;
 use lazy_static::*;
 pub use manager::{fetch_task, TaskManager};
@@ -114,4 +114,79 @@ lazy_static! {
 ///Add init process to the manager
 pub fn add_initproc() {
     add_task(INITPROC.clone());
+}
+
+/// mmap function
+pub fn mmap(start: usize, len: usize, port: usize) -> isize{
+
+    if !VirtAddr::from(start).aligned() || port & !0x7 != 0 || port & 0x7 == 0 {
+        return -1;
+    }
+
+    let start_va = VirtAddr::from(start);
+    let end_va = VirtAddr::from(start + len);
+    let map_permission = MapPermission::from_bits((port as u8) << 1).unwrap() | MapPermission::U;
+    
+    let task = current_task().unwrap();
+    let mut task_inner = task.inner_exclusive_access();
+    
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()){
+        if let Some(pte) = task_inner.memory_set.translate(vpn) {
+            if pte.is_valid() {
+                return -1;
+            }
+        }
+    }
+    task_inner.memory_set.insert_framed_area(start_va, end_va, map_permission);
+    
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()){
+        if let None = task_inner.memory_set.translate(vpn) {
+            return -1;
+        }
+        if let Some(pte) = task_inner.memory_set.translate(vpn) {
+            if !pte.is_valid() {
+                return -1;
+            }
+        }
+    }
+    0
+}
+
+/// munmap function
+pub fn munmap(start: usize, len: usize) -> isize {
+
+    if !VirtAddr::from(start).aligned() {
+        return -1;
+    }
+
+    let start_va = VirtAddr::from(start);
+    let end_va = VirtAddr::from(start + len);
+    let task = current_task().unwrap();
+    let mut task_inner = task.inner_exclusive_access();
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+        match task_inner.memory_set.translate(vpn) {
+            Some(pte) => {
+                if !pte.is_valid() {
+                    return -1;
+                }
+            },
+            None => {return -1;}
+        }
+    }
+
+    println!("ALL VPN is valid!");
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+        task_inner.memory_set.delete_vpn(vpn);
+    }
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+            if let Some(pte) = task_inner.memory_set.translate(vpn) {
+                if pte.is_valid() {
+                    return -1
+                }
+            }
+    }
+    0
 }

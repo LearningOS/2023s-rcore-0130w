@@ -1,0 +1,15 @@
+ 思路
+
+当前的调度策略是，为进程维护了一个dequeue，每次添加任务都把要的任务放到队尾，然后需要的任务都从队首取出
+
+我们现在为了实现stride调度算法，应该为任务维护一个Vector<Arc<TaskControlBlock>>，为了简单起见直接暴力，每次都去遍历Vector中的所有
+
+TaskControlBlock，然后找出此时最小的inner里面stride的TaskControlBlock，将这个fetch出来
+
+太好了，终于写出来了
+
+确实有意思，而且最后在所有权那卡了一会，感觉还是有点rust使用不是特别熟吧
+
+然后在spawn算法的时候，一开始一直在输出parent pid，看了半天才发现自己返回值是在task.spawn里面，赶紧改掉了
+
+然后又出了点别的锅，结果发现spawn创建的process忘记加入task队列了
