@@ -22,7 +22,7 @@ mod switch;
 #[allow(rustdoc::private_intra_doc_links)]
 mod task;
 
-use crate::fs::{open_file, OpenFlags};
+use crate::{fs::{open_file, OpenFlags}, mm::{VirtAddr, MapPermission, VirtPageNum, VPNRange}};
 use alloc::sync::Arc;
 pub use context::TaskContext;
 use lazy_static::*;
@@ -102,6 +102,81 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     // we do not have to save task context
     let mut _unused = TaskContext::zero_init();
     schedule(&mut _unused as *mut _);
+}
+
+/// mmap function
+pub fn mmap(start: usize, len: usize, port: usize) -> isize{
+
+    if !VirtAddr::from(start).aligned() || port & !0x7 != 0 || port & 0x7 == 0 {
+        return -1;
+    }
+
+    let start_va = VirtAddr::from(start);
+    let end_va = VirtAddr::from(start + len);
+    let map_permission = MapPermission::from_bits((port as u8) << 1).unwrap() | MapPermission::U;
+    
+    let task = current_task().unwrap();
+    let mut task_inner = task.inner_exclusive_access();
+    
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()){
+        if let Some(pte) = task_inner.memory_set.translate(vpn) {
+            if pte.is_valid() {
+                return -1;
+            }
+        }
+    }
+    task_inner.memory_set.insert_framed_area(start_va, end_va, map_permission);
+    
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()){
+        if let None = task_inner.memory_set.translate(vpn) {
+            return -1;
+        }
+        if let Some(pte) = task_inner.memory_set.translate(vpn) {
+            if !pte.is_valid() {
+                return -1;
+            }
+        }
+    }
+    0
+}
+
+/// munmap function
+pub fn munmap(start: usize, len: usize) -> isize {
+
+    if !VirtAddr::from(start).aligned() {
+        return -1;
+    }
+
+    let start_va = VirtAddr::from(start);
+    let end_va = VirtAddr::from(start + len);
+    let task = current_task().unwrap();
+    let mut task_inner = task.inner_exclusive_access();
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+        match task_inner.memory_set.translate(vpn) {
+            Some(pte) => {
+                if !pte.is_valid() {
+                    return -1;
+                }
+            },
+            None => {return -1;}
+        }
+    }
+
+    println!("ALL VPN is valid!");
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+        task_inner.memory_set.delete_vpn(vpn);
+    }
+
+    for vpn in VPNRange::new(VirtPageNum::from(start_va), (end_va).ceil()) {
+            if let Some(pte) = task_inner.memory_set.translate(vpn) {
+                if pte.is_valid() {
+                    return -1
+                }
+            }
+    }
+    0
 }
 
 lazy_static! {

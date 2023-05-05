@@ -66,6 +66,14 @@ impl MemorySet {
             None,
         );
     }
+    /// delete vpn
+    pub fn delete_vpn(&mut self, vpn : VirtPageNum) {
+        for map_area in self.areas.iter_mut() {
+            if map_area.check_vpn_exist(vpn) {
+                map_area.unmap_one(&mut self.page_table, vpn);
+            }
+        }
+    }
     /// remove a area
     pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
         if let Some((idx, area)) = self
@@ -350,6 +358,12 @@ impl MapArea {
             map_type: another.map_type,
             map_perm: another.map_perm,
         }
+    }
+    pub fn check_vpn_exist(&self, vpn: VirtPageNum) -> bool{
+        if self.vpn_range.get_start() <= vpn && self.vpn_range.get_end() >= vpn {
+            return true;
+        }
+        return false;
     }
     pub fn map_one(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         let ppn: PhysPageNum;

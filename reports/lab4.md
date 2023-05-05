@@ -1,0 +1,8 @@
+本节lab主要实现了fstat、linkat、unlinkat三个系统调用
+对于fstat,很多文件的信息已经写死了，实现起来相对更轻松了一点，主要思路是通过传入的文件标识符去找文件，找到文件后去获取该文件对应的Inode,然后通过Inode得到对应的disk_node，再遍历根目录下面的所有文件，如果disknode和diskoffset一样就硬链接增加，并把此时的inode的id传回
+linkat就是遍历文件，先根据旧的文件名字找到对应的Inode的id,再把新的路径和这个id创建一个DirEntry，然后直接在末尾写入即可
+unlinkat就是找到这个文件，然后把buf清零
+
+实验中遇到的两个问题：
+第一个是在写unlinkat的时候，当时在想如果是最后一个要怎么删掉整个inode,后来想了一下，发现这玩意是用Arc盖住的，只要没有引用了自己就会释放
+第二个又是所有权的问题，不小心获取了taskinner之后再去获取token

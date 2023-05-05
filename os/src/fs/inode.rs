@@ -4,7 +4,7 @@
 //!
 //! `UPSafeCell<OSInodeInner>` -> `OSInode`: for static `ROOT_INODE`,we
 //! need to wrap `OSInodeInner` into `UPSafeCell`
-use super::File;
+use super::{File, Stat, StatMode};
 use crate::drivers::BLOCK_DEVICE;
 use crate::mm::UserBuffer;
 use crate::sync::UPSafeCell;
@@ -124,6 +124,25 @@ pub fn open_file(name: &str, flags: OpenFlags) -> Option<Arc<OSInode>> {
     }
 }
 
+/// linkat_file
+pub fn linkat_file(old_name : &str, new_name : &str) -> isize{
+    if old_name == new_name {
+        return -1;
+    }
+    match ROOT_INODE.find(old_name) {
+        Some(_) => {ROOT_INODE.link(old_name, new_name); return 0;}
+        None => {return -1;}
+    }
+}
+
+/// unlink a file
+pub fn unlink_file(name : &str) -> isize {
+    match ROOT_INODE.find(name) {
+        Some(_) => {ROOT_INODE.unlink(name); return 0;}
+        None => {return -1;}
+    }
+}
+
 impl File for OSInode {
     fn readable(&self) -> bool {
         self.readable
@@ -154,5 +173,17 @@ impl File for OSInode {
             total_write_size += write_size;
         }
         total_write_size
+    }
+    fn stat(&self) -> Stat{
+        let inner = self.inner.exclusive_access();
+        let inode = inner.inode.clone();
+        let (ino, nlink) = ROOT_INODE.get_ino_and_link(inode);
+        Stat {
+            dev : 0,
+            ino : ino,
+            mode : StatMode::FILE,
+            nlink : nlink,
+            pad : [0;7],
+        }
     }
 }
