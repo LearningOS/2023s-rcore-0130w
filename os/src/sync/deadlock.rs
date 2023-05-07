@@ -29,24 +29,24 @@ impl DeadlockChecker {
     }
 
     /// add resource
-    pub fn add_res(&mut self, res_id: usize) {
-        self.available_vector[res_id] += 1;
+    pub fn add_res(&mut self, res_id: usize, num: usize) {
+        self.available_vector[res_id] = num as u32;
     }
-    /// check if status safe or not
-    pub fn check(&mut self, thread_count: usize, res_count: usize) -> bool {
+    /// check if status is safe
+    pub fn check(&self, thread_size: usize, res_size: usize) -> bool{
         let mut work = self.available_vector;
         let mut finish = [false; MAX_THREADS];
 
         loop {
             let mut tid = -1;
 
-            for i in 0..thread_count {
+            for i in 0..thread_size {
                 if finish[i] {
                     continue;
                 }
 
                 let mut flag = false;
-                for j in 0..res_count {
+                for j in 0..res_size {
                     if self.need_matrix[i][j] > work[j] {
                         flag = true;
                         break;
@@ -56,12 +56,12 @@ impl DeadlockChecker {
                 if flag {
                     continue;
                 } else {
-                    tid = i as isize;
+                    tid = i as i32;
                 }
             }
 
             if tid != -1 {
-                for j in 0..res_count {
+                for j in 0..res_size {
                     work[j] += self.used_matrix[tid as usize][j];
                 }
                 finish[tid as usize] = true
@@ -71,11 +71,13 @@ impl DeadlockChecker {
         }
 
         let mut flag = true;
-        for i in 0..thread_count {
+        for i in 0..thread_size {
             if !finish[i] {
                 flag = false;
             }
         }
         flag
+    
     }
+
 }

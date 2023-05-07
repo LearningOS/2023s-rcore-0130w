@@ -56,7 +56,7 @@ pub fn sys_mutex_create(blocking: bool) -> isize {
         process_inner.mutex_list.len() as isize - 1
     };
     if let Some(checker) = process_inner.mutex_checker.as_mut() {
-        checker.add_res(res_id as usize);
+        checker.add_res(res_id as usize , 1);
     }
     res_id
 
@@ -164,9 +164,7 @@ pub fn sys_semaphore_create(res_count: usize) -> isize {
     };
 
     if let Some(checker) = process_inner.semaphore_checker.as_mut() {
-        for _i in 0..res_count {
-            checker.add_res(id);
-        }
+        checker.add_res(id, res_count);
     }
     id as isize
 }
