@@ -84,6 +84,16 @@ pub fn current_task() -> Option<Arc<TaskControlBlock>> {
     PROCESSOR.exclusive_access().current()
 }
 
+/// Get current task_id
+pub fn get_current_task_id() -> usize {
+    if let Some(task) = PROCESSOR.exclusive_access().current(){
+        if let Some(userres) = task.inner_exclusive_access().res.as_ref() {
+            return userres.tid;
+        }
+    }
+    0
+}
+
 /// get current process
 pub fn current_process() -> Arc<ProcessControlBlock> {
     current_task().unwrap().process.upgrade().unwrap()
